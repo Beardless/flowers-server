@@ -5,18 +5,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"os"
+	"strconv"
 
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
-const (
-	host   = "localhost"
-	port   = 5432
-	user   = "bartlomiejmikolajczuk"
-	dbname = "bartlomiejmikolajczuk"
-)
+type envVariables struct {
+	host   string
+	port   int
+	user   string
+	dbname string
+}
 
 func newRouter() *mux.Router {
 	r := mux.NewRouter()
@@ -25,10 +29,32 @@ func newRouter() *mux.Router {
 	return r
 }
 
+func loadAndReturnEnvs() envVariables {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	parsedPort, err := strconv.Atoi(os.Getenv("PORT"))
+	if err != nil {
+		log.Fatal("Couldnt parse port number")
+	}
+
+	envs := envVariables{
+		host:   os.Getenv("HOST"),
+		port:   parsedPort,
+		user:   os.Getenv("USER"),
+		dbname: os.Getenv("DBNAME"),
+	}
+
+	return envs
+}
+
 func main() {
+	envs := loadAndReturnEnvs()
 	psqlConnString := fmt.Sprintf("host=%s port=%d user=%s "+
 		"dbname=%s sslmode=disable",
-		host, port, user, dbname)
+		envs.host, envs.port, envs.user, envs.dbname)
 
 	db, err := sql.Open("postgres", psqlConnString)
 	if err != nil {
@@ -36,12 +62,14 @@ func main() {
 	}
 	defer db.Close()
 
+	fmt.Println("PORT:", os.Getenv("PORT"))
+
 	sqlStatement := `
 		INSERT INTO users (age, email, first_name, last_name)
 		VALUES ($1, $2, $3, $4)
 		RETURNING id`
 	id := 0
-	err = db.QueryRow(sqlStatement, 30, "jon@calhoun.io", "Jonathan", "Calhoun").Scan(&id)
+	err = db.QueryRow(sqlStatement, 31, "jon@calhouaasdn.io", "Jonathansss", "Calhounsss").Scan(&id)
 	if err != nil {
 		panic(err)
 	}
