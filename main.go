@@ -1,10 +1,10 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/json"
+	"flowers-server/config"
+	"flowers-server/database"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -24,8 +24,8 @@ type envVariables struct {
 
 func newRouter() *mux.Router {
 	r := mux.NewRouter()
-	r.HandleFunc("/flower", getLastWatering).Methods("GET")
-	r.HandleFunc("/flower", createNewWatering).Methods("POST")
+	r.HandleFunc("/flower", getWaterings).Methods("GET")
+	// r.HandleFunc("/flower", createNewWatering).Methods("POST")
 	return r
 }
 
@@ -56,79 +56,78 @@ func main() {
 		"dbname=%s sslmode=disable",
 		envs.host, envs.port, envs.user, envs.dbname)
 
-	db, err := sql.Open("postgres", psqlConnString)
-	if err != nil {
-		panic(err)
-	}
-	defer db.Close()
+	config.InitDB(psqlConnString)
 
 	fmt.Println("PORT:", os.Getenv("PORT"))
 
-	sqlStatement := `
-		INSERT INTO users (age, email, first_name, last_name)
-		VALUES ($1, $2, $3, $4)
-		RETURNING id`
-	id := 0
-	err = db.QueryRow(sqlStatement, 31, "jon@calhouaasdn.io", "Jonathansss", "Calhounsss").Scan(&id)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("New record ID is:", id)
+	// sqlStatement := `
+	// INSERT INTO users (age, email, first_name, last_name)
+	// VALUES ($1, $2, $3, $4)
+	// RETURNING id`
+	// id := 0
+	// err = db.QueryRow(sqlStatement, 31, "jon@calhouaasdn.io", "Jonathansss", "Calhounsss").Scan(&id)
+	// if err != nil {
+	// panic(err)
+	// }
+	// fmt.Println("New record ID is:", id)
 
 	r := newRouter()
 	http.ListenAndServe(":8080", r)
 }
 
-// Watering type
-type Watering struct {
-	ID          string `json:"id"`
-	Timestamp   string `json:"timestamp"`
-	Description string `json:"description"`
-}
-
-var waterings = []Watering{
-	Watering{
-		ID:          "my test first watering",
-		Timestamp:   "My first test timestamp",
-		Description: "Description of watering",
-	},
-}
-
-func getLastWatering(w http.ResponseWriter, r *http.Request) {
-	lastWatering := waterings[len(waterings)-1]
-
-	wateringList, err := json.Marshal(lastWatering)
+func getWaterings(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, http.StatusText(405), 405)
+		return
+	}
+	bks, err := database.GetAllWaterings()
 	if err != nil {
-		fmt.Println(fmt.Errorf("Error: %v", err))
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, http.StatusText(500), 500)
+		return
+	}
+
+	js, err := json.Marshal(bks)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("content-type", "application/json")
-	w.Write(wateringList)
+	w.Write(js)
 }
 
-func createNewWatering(w http.ResponseWriter, r *http.Request) {
-	b, err := ioutil.ReadAll(r.Body)
-	defer r.Body.Close()
-	if err != nil {
-		http.Error(w, err.Error(), 500)
-		return
-	}
+// func createNewWatering(w http.ResponseWriter, r *http.Request) {
+// 	b, err := ioutil.ReadAll(r.Body)
+// 	defer r.Body.Close()
+// 	if err != nil {
+// 		http.Error(w, err.Error(), 500)
+// 		return
+// 	}
 
-	// Unmarshal
-	var watering Watering
-	err = json.Unmarshal(b, &watering)
-	if err != nil {
-		http.Error(w, err.Error(), 500)
-		return
-	}
+// 	// Unmarshal
+// 	var watering Watering
+// 	err = json.Unmarshal(b, &watering)
+// 	if err != nil {
+// 		http.Error(w, err.Error(), 500)
+// 		return
+// 	}
 
-	waterings = append(waterings, watering)
+// 	sqlStatement := `
+// 	INSERT INTO users (age, email, first_name, last_name)
+// 	VALUES ($1, $2, $3, $4)
+// 	RETURNING id`
+// 	id := 0
+// 	err = db.QueryRow(sqlStatement, 31, "jon@calhouaasdn.io", "Jonathansss", "Calhounsss").Scan(&id)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	fmt.Println("New record ID is:", id)
 
-	w.Header().Set("content-type", "application/json")
-	w.Write(b)
-}
+// 	waterings = append(waterings, watering)
+
+// 	w.Header().Set("content-type", "application/json")
+// 	w.Write(b)
+// }
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Hello World!")
