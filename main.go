@@ -22,10 +22,18 @@ func newRouter() *mux.Router {
 func main() {
 	envs := config.ReturnEnvs()
 	fmt.Println(envs)
-	psqlConnString := fmt.Sprintf("host=%s port=%d user=%s "+
-		"dbname=%s sslmode=disable",
-		envs.Host, envs.Port, envs.User, envs.Dbname)
-	config.InitDB(psqlConnString)
+	const (
+		databaseName       = "postgres"
+		password           = "password"
+		user               = "postgres"
+		instanceConnection = "${flowers-app-259015:europe-west1:flower-database}-p"
+	)
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable",
+		instanceConnection,
+		user,
+		password,
+		databaseName)
+	config.InitDB(dsn)
 
 	r := newRouter()
 	http.ListenAndServe(":8080", r)

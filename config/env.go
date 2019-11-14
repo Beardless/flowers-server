@@ -3,16 +3,14 @@ package config
 import (
 	"log"
 	"os"
-	"strconv"
 
 	"github.com/joho/godotenv"
 )
 
 type EnvVariables struct {
-	Host   string
-	Port   int
-	User   string
-	Dbname string
+	Host     string
+	User     string
+	Password string
 }
 
 func ReturnEnvs() EnvVariables {
@@ -21,16 +19,10 @@ func ReturnEnvs() EnvVariables {
 		log.Fatal("Error loading .env file")
 	}
 
-	parsedPort, err := strconv.Atoi(os.Getenv("PORT"))
-	if err != nil {
-		log.Fatal("Couldnt parse port number")
-	}
-
 	envs := EnvVariables{
-		Host:   os.Getenv("HOST"),
-		Port:   parsedPort,
-		User:   os.Getenv("USER"),
-		Dbname: os.Getenv("DBNAME"),
+		Host:     os.Getenv("HOST"),
+		User:     os.Getenv("DB_USER"),
+		Password: os.Getenv("PASSWORD"),
 	}
 
 	return envs
